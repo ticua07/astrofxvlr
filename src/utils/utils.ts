@@ -23,6 +23,7 @@ export function getHTMLScore({
   <!DOCTYPE html>
   <html>
   <head>
+    <title>fxvlr: ${team1} ${score} ${team2}</title>
     <meta http-equiv="refresh" content="0;url=${path}" />
     <meta property="og:title" content="${team1} ${score} ${team2}">
     <meta property="twitter:title" content="${team1} ${score} ${team2}">
@@ -88,6 +89,7 @@ export function getForumData({
   <!DOCTYPE html>
   <html>
   <head>
+    <title>fxvlr: @${author}</title>
     <meta http-equiv="refresh" content="0;url=${path}" />
     <link rel="canonical" href="${path}" />
     <meta property="og:url" content="${path}" />
