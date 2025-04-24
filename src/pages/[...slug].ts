@@ -1,50 +1,72 @@
 import * as cheerio from "cheerio";
-import { getHTMLScore, getForumData, formatScores } from "../utils/utils"; // Adjust if needed
+import type { APIRoute } from "astro";
+import { getHTMLScore, formatScores, getForumData } from "../utils/utils";
 
 const error_template = `
-<!DOCTYPE html>
 <html>
-  <head>
-    <meta property="og:title" content="Couldn't fetch match data" />
-  </head>
-  <body></body>
+<head>
+  <meta property="og:title" content="Couldn't fetch match data">
+</head>
+<body></body>
 </html>
 `;
 
-function parseMatchData($: cheerio.CheerioAPI, path: string) {
-    const team1 = $(".match-header-link-name.mod-1 > .wf-title-med").text().trim();
-    const team2 = $(".match-header-link-name.mod-2 > .wf-title-med").text().trim();
+function getMatchScore($: cheerio.CheerioAPI, path: string) {
+    const team1 = $(".match-header-link-name.mod-1 > .wf-title-med")
+        .text()
+        .replaceAll("\n", "")
+        .replaceAll("\t", "");
+    const team2 = $(".match-header-link-name.mod-2 > .wf-title-med")
+        .text()
+        .replaceAll("\n", "")
+        .replaceAll("\t", "");
 
     const scoreSpans = $(".match-header-vs-score .js-spoiler > span");
-    const leftScore = Number.parseInt(scoreSpans.eq(0).text().trim());
-    const rightScore = Number.parseInt(scoreSpans.eq(2).text().trim());
+    const leftScoreText = scoreSpans.eq(0).text().trim();
+    const rightScoreText = scoreSpans.eq(2).text().trim();
+
+    const leftScore = Number.parseInt(leftScoreText);
+    const rightScore = Number.parseInt(rightScoreText);
 
     const isLive = Number.isNaN(leftScore) || Number.isNaN(rightScore);
+
     const upcomingNote = $(".match-header-vs-note.mod-upcoming").text().trim();
     const isUpcoming = Boolean(upcomingNote);
 
-    const score = !Number.isNaN(leftScore) && !Number.isNaN(rightScore)
-        ? `${leftScore}:${rightScore}`
-        : isUpcoming
-            ? `⏳ ${upcomingNote}`
-            : "LIVE";
+    let score = "LIVE";
+    if (!Number.isNaN(leftScore) && !Number.isNaN(rightScore)) {
+        score = `${leftScore}:${rightScore}`;
+    } else if (isUpcoming) {
+        score = `⏳ ${upcomingNote}`;
+    }
 
-    const scoresList = $(".score").map((_, el) => ({
-        score: Number.parseInt($(el).text().trim()),
-        isWin: $(el).hasClass("mod-win"),
-    })).get();
+    const scoresList = $(".score")
+        .map((_, el) => ({
+            score: Number.parseInt($(el).text().trim()),
+            isWin: $(el).hasClass("mod-win"),
+        }))
+        .get();
 
     const results = isUpcoming
         ? [`Match starts in ${upcomingNote}`]
         : scoresList.length > 0
-            ? formatScores({ team1, team2, scores: scoresList })
+            ? formatScores({
+                team1,
+                team2,
+                scores: scoresList,
+            })
             : ["Match is live or starting soon."];
 
-    const normalizeUrl = (url?: string) => url?.startsWith("//") ? `https:${url}` : (url ?? "");
+    const team1Image = $("a.match-header-link.mod-1 img").attr("src");
+    const team2Image = $("a.match-header-link.mod-2 img").attr("src");
 
-    const team1Image = normalizeUrl($("a.match-header-link.mod-1 img").attr("src"));
-    const team2Image = normalizeUrl($("a.match-header-link.mod-2 img").attr("src"));
-    const winnerImage = (!isLive && rightScore > leftScore) ? team2Image : team1Image;
+    const normalizeUrl = (url?: string) =>
+        url?.startsWith("//") ? `https:${url}` : (url ?? "");
+
+    let winnerImage = normalizeUrl(team1Image);
+    if (!isLive && rightScore > leftScore) {
+        winnerImage = normalizeUrl(team2Image);
+    }
 
     const fullDate = $(".match-header-date .moment-tz-convert")
         .eq(0)
@@ -52,7 +74,11 @@ function parseMatchData($: cheerio.CheerioAPI, path: string) {
         .trim();
     const time = $(".match-header-date .moment-tz-convert").eq(1).text().trim();
 
-    return {
+    if (!score || !fullDate || !time) {
+        return null;
+    }
+
+    return getHTMLScore({
         team1,
         team2,
         score,
@@ -61,21 +87,45 @@ function parseMatchData($: cheerio.CheerioAPI, path: string) {
         fullDate,
         time,
         path,
-    };
+    });
 }
 
-function tryGetForumData($: cheerio.CheerioAPI, path: string) {
-    const author = $(".post-header-author-username").text().trim();
-    const postText = $(".post-body").first().text().trim();
-    const allComents = $(".vm-comment").length;
-    const fragCount = $(".post-frag").text().trim();
-    const starsText = $(".rating-full-stars").attr("style") ?? "";
-    const roundedStars = Math.round(
-        Number.parseFloat(starsText.replace(/[^0-9.]/g, "")) / 20
-    ); // convert from percent to 0–5 scale
+export const GET: APIRoute = async ({ request, url }) => {
+    const id = url.pathname.substring(1);
+    console.log(id)
+    const path = `https://vlr.gg${url.pathname}`;
+    if (!id) {
+        return new Response(error_template, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+    }
 
-    if (author && postText) {
-        return getForumData({
+    try {
+        const res = await fetch(`https://vlr.gg/${id}`);
+        const html = await res.text();
+        const $ = cheerio.load(html);
+
+        const matchData = getMatchScore($, path);
+        if (matchData !== null) {
+            return new Response(matchData, {
+                headers: { "Content-Type": "text/html; charset=utf-8" },
+            });
+        }
+
+        const author = $("a.post-header-author").first().text().trim();
+        const postText = $("p", $(".post-body").first()).text().trim();
+        const allComents = $(".post").length;
+        const fragCount = $("#thread-frag-count").text().trim();
+
+        let totalStars = 0;
+        $(".star", $(".post-header-stars").first()).each((_, el) => {
+            const classList = $(el).attr("class")?.split(" ");
+            const modClass = classList?.find((cls) => cls.startsWith("mod-"));
+            const value = Number.parseInt((modClass || "").replace("mod-", ""), 10);
+            totalStars += value / 3;
+        });
+
+        const roundedStars = Math.round(totalStars * 2) / 2;
+
+        const forumData = getForumData({
             author,
             postText,
             allComents,
@@ -83,39 +133,12 @@ function tryGetForumData($: cheerio.CheerioAPI, path: string) {
             roundedStars,
             path,
         });
-    }
 
-    return null;
-}
-
-export async function GET({ params }: { params: any }) {
-    const slug: string[] = params.slug;
-    console.log(slug)
-    const path = `https://www.vlr.gg/${slug}`
-
-    try {
-        const res = await fetch(path);
-        if (!res.ok) throw new Error("Match not found");
-        const html = await res.text();
-
-        const $ = cheerio.load(html);
-        const forumMeta = tryGetForumData($, path);
-        if (forumMeta) {
-            return new Response(forumMeta, {
-                headers: { "Content-Type": "text/html; charset=utf-8" },
-            });
-        }
-
-        const matchMeta = parseMatchData($, path);
-        const renderedHTML = getHTMLScore(matchMeta);
-
-        return new Response(renderedHTML, {
+        return new Response(forumData, {
             headers: { "Content-Type": "text/html; charset=utf-8" },
         });
-    } catch (e) {
-        return new Response(error_template, {
-            headers: { "Content-Type": "text/html; charset=utf-8" },
-            status: 500,
-        });
+    } catch (err) {
+        console.log("Error fetching or parsing data:", err);
+        return new Response(error_template, { headers: { "Content-Type": "text/html; charset=utf-8" } });
     }
-}
+};

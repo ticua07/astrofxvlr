@@ -59,11 +59,12 @@ export function formatScores({ team1, team2, scores }: formatScoresProps) {
 
 		if (!score1.isWin && !score2.isWin) {
 			result.push(`⚫ ${team1} ${score1.score} - ${score2.score} ${team2} ⚫`);
+		} else {
+			result.push(
+				`${score1.isWin ? "🟢" : "🔴"} ${team1} ${score1.score} - ${score2.score} ${team2} ${score2.isWin ? "🟢" : "🔴"}`,
+			);
 		}
 
-		result.push(
-			`${score1.isWin ? "🟢" : "🔴"} ${team1} ${score1.score} - ${score2.score} ${team2} ${score2.isWin ? "🟢" : "🔴"}`,
-		);
 	}
 	return result;
 }

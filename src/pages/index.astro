@@ -10,10 +10,32 @@ import Layout from "../layouts/Layout.astro";
 	<main class="h-full w-full flex flex-col items-center justify-center gap-2">
 		<h1 class="text-5xl font-bold">fxvlr</h1>
 		<h2>Add more information to vlr.gg's embeds.</h2>
+		<p id="newUrl" class="bg-red-200">Waiting for url.</p>
 		<input
+			id="url"
 			class="rounded border p-2 max-w-96 w-full"
 			placeholder="https://vlr.gg/..."
 		/>
-		<p class="bg-red-200">Waiting for url.</p>
 	</main>
 </Layout>
+
+<script>
+	const $input: HTMLInputElement = document.querySelector("#url")!;
+	const $newUrl: HTMLParagraphElement = document.querySelector("#newUrl")!;
+
+	$input.addEventListener("input", () => {
+		try {
+			const url = new URL($input.value!);
+			console.log($newUrl.textContent)
+			if (url.hostname === "vlr.gg" || url.hostname === "www.vlr.gg") {
+				const newUrl = `https://vlr.ticua.ar${url.pathname}`
+				$newUrl.textContent = newUrl;
+			}
+		} catch (err) {
+			console.log(err)
+			console.log($input.value)
+			$newUrl.textContent = "Waiting for url."
+		}
+
+	})
+</script>
