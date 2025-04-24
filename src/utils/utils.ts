@@ -23,7 +23,7 @@ export function getHTMLScore({
   <!DOCTYPE html>
   <html>
   <head>
-    
+    <meta http-equiv="refresh" content="0;url=${path}" />
     <meta property="og:title" content="${team1} ${score} ${team2}">
     <meta property="twitter:title" content="${team1} ${score} ${team2}">
     <meta property="og:description" content="${results.join("\n")}\n\n${fullDate} · ${time}">
@@ -38,7 +38,6 @@ export function getHTMLScore({
 
 	return template;
 }
-// <meta http-equiv="refresh" content="0;url=${path}" />
 
 type formatScoresProps = {
 	team1: string;
@@ -89,7 +88,7 @@ export function getForumData({
   <!DOCTYPE html>
   <html>
   <head>
-    
+    <meta http-equiv="refresh" content="0;url=${path}" />
     <link rel="canonical" href="${path}" />
     <meta property="og:url" content="${path}" />
     <meta property="twitter:site" content="@${author}" />
@@ -110,4 +109,3 @@ export function getForumData({
 	return template;
 }
 
-// <meta http-equiv="refresh" content="0;url=${path}" />
