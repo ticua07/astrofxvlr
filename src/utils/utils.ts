@@ -55,8 +55,6 @@ export function formatScores({ team1, team2, scores }: formatScoresProps) {
 		const score1 = scores[i];
 		const score2 = scores[i + 1];
 
-		console.log(score1, score2);
-
 		if (!score1.isWin && !score2.isWin) {
 			result.push(`⚫ ${team1} ${score1.score} - ${score2.score} ${team2} ⚫`);
 		} else {
@@ -71,7 +69,10 @@ export function formatScores({ team1, team2, scores }: formatScoresProps) {
 
 type getForumDataProps = {
 	author: string;
+	postTitle: string;
 	postText: string;
+	regionName: string;
+	emoji: string;
 	allComents: number;
 	fragCount: string;
 	roundedStars: number;
@@ -79,7 +80,10 @@ type getForumDataProps = {
 };
 export function getForumData({
 	author,
+	postTitle,
 	postText,
+	regionName,
+	emoji,
 	allComents,
 	fragCount,
 	roundedStars,
@@ -90,17 +94,16 @@ export function getForumData({
   <html>
   <head>
     <title>fxvlr: @${author}</title>
-    <meta http-equiv="refresh" content="0;url=${path}" />
     <link rel="canonical" href="${path}" />
     <meta property="og:url" content="${path}" />
     <meta property="twitter:site" content="@${author}" />
     <meta property="twitter:creator" content="@${author}" />
     <meta property="theme-color" content="#ff5462" />
-    <meta property="twitter:title" content="@${author}" />
+    <meta property="twitter:title" content="@${author} - ${postTitle}" />
     <meta property="twitter:image" content="0" />
     <meta property="twitter:card" content="undefined" />
-    <meta property="og:title" content="@${author}" />
-    <meta property="og:description" content="${postText}\n\n⭐ ${roundedStars} 💬 ${allComents} 🗳️ ${fragCount} " />
+    <meta property="og:title" content="@${author} - ${postTitle}" />
+    <meta property="og:description" content="${postText}\n\n${emoji} ${regionName} ⭐ ${roundedStars} 💬 ${allComents} 🗳️ ${fragCount} " />
     <meta property="og:site_name" content="vlr.gg" />
     <link href='https://www.vlr.gg/img/vlr/logo_header.png' rel='icon' sizes='36x36' type='image/png'>
   </head>
@@ -111,3 +114,12 @@ export function getForumData({
 	return template;
 }
 
+// chatgpt made this don't ask me nothing lmao
+export function getFlagEmoji(countryCode: string) {
+	if (!countryCode || countryCode.length !== 2) return null;
+	return countryCode
+		.toUpperCase()
+		.split('')
+		.map(char => String.fromCodePoint(char.charCodeAt(0) + 127397))
+		.join('');
+}

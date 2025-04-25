@@ -26,14 +26,11 @@ import Layout from "../layouts/Layout.astro";
 	$input.addEventListener("input", () => {
 		try {
 			const url = new URL($input.value!);
-			console.log($newUrl.textContent)
 			if (url.hostname === "vlr.gg" || url.hostname === "www.vlr.gg") {
 				const newUrl = `https://vlr.ticua.ar${url.pathname}`
 				$newUrl.textContent = newUrl;
 			}
 		} catch (err) {
-			console.log(err)
-			console.log($input.value)
 			$newUrl.textContent = "Waiting for url."
 		}
 

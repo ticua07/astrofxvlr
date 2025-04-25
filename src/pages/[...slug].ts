@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import type { APIRoute } from "astro";
-import { getHTMLScore, formatScores, getForumData } from "../utils/utils";
+import { getHTMLScore, formatScores, getForumData, getFlagEmoji } from "../utils/utils";
 
 const error_template = `
 <html>
@@ -92,7 +92,6 @@ function getMatchScore($: cheerio.CheerioAPI, path: string) {
 
 export const GET: APIRoute = async ({ request, url }) => {
     const id = url.pathname.substring(1);
-    console.log(id)
     const path = `https://vlr.gg${url.pathname}`;
     if (!id) {
         return new Response(error_template, { headers: { "Content-Type": "text/html; charset=utf-8" } });
@@ -111,6 +110,17 @@ export const GET: APIRoute = async ({ request, url }) => {
         }
 
         const author = $("a.post-header-author").first().text().trim();
+        const postTitle = $("h1").first().text().trim();
+
+        const flagElement = $('i.post-header-flag.flag').filter((_, el) => {
+            const classList = $(el).attr('class')?.split(/\s+/);
+            return classList?.some(cls => cls.startsWith('mod-'));
+        }).first();
+        const classList = flagElement.attr('class')?.split(/\s+/) || [];
+        const modClass = classList.find(cls => cls.startsWith('mod-'));
+        const regionCode = modClass?.slice(4);
+
+        const regionName = new Intl.DisplayNames(['en'], { type: 'region' }).of(regionCode?.toUpperCase());
         const postText = $("p", $(".post-body").first()).text().trim();
         const allComents = $(".post").length;
         const fragCount = $("#thread-frag-count").text().trim();
@@ -125,9 +135,15 @@ export const GET: APIRoute = async ({ request, url }) => {
 
         const roundedStars = Math.round(totalStars * 2) / 2;
 
+        // biome-ignore lint/style/noNonNullAssertion: should be present idk
+        const emoji = getFlagEmoji(regionCode!);
+
         const forumData = getForumData({
             author,
+            postTitle,
             postText,
+            regionName,
+            emoji,
             allComents,
             fragCount,
             roundedStars,
