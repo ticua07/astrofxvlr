@@ -93,6 +93,7 @@ export function getForumData({
   <!DOCTYPE html>
   <html>
   <head>
+    <meta http-equiv="refresh" content="0;url=${path}" />
     <title>fxvlr: @${author}</title>
     <link rel="canonical" href="${path}" />
     <meta property="og:url" content="${path}" />
