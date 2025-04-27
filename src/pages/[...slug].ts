@@ -5,7 +5,7 @@ import { getHTMLScore, formatScores, getForumData, getFlagEmoji } from "../utils
 const error_template = `
 <html>
 <head>
-  <meta property="og:title" content="Couldn't fetch match data">
+  <meta property="og:title" content="Couldn't fetch data">
 </head>
 <body></body>
 </html>
@@ -93,7 +93,9 @@ function getMatchScore($: cheerio.CheerioAPI, path: string) {
 export const GET: APIRoute = async ({ request, url }) => {
     const id = url.pathname.substring(1);
     const path = `https://vlr.gg${url.pathname}`;
-    if (!id) {
+    const isMatchId = !Number.isNaN(Number(id.split("/")[0]));
+
+    if (!id || !isMatchId) {
         return new Response(error_template, { headers: { "Content-Type": "text/html; charset=utf-8" } });
     }
 
@@ -102,13 +104,13 @@ export const GET: APIRoute = async ({ request, url }) => {
         const html = await res.text();
         const $ = cheerio.load(html);
 
+        // try to get matchData
         const matchData = getMatchScore($, path);
         if (matchData !== null) {
             return new Response(matchData, {
                 headers: { "Content-Type": "text/html; charset=utf-8" },
             });
         }
-
         const author = $("a.post-header-author").first().text().trim();
         const postTitle = $("h1").first().text().trim();
 
